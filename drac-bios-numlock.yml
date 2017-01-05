@@ -1,0 +1,31 @@
+---
+# Playbook to configure the 'NumLock' BIOS settings to 'On' on Dell nodes
+# with iDRAC cards. The system will not be rebooted, so the changes will
+# not be applied immediately.
+
+- hosts: all
+  gather_facts: no
+  vars_prompt:
+    # Prompt for the DRAC password if not already defined. It may be provided
+    # as a variable override using ansible-playbook -e.
+    - name: drac_password
+      prompt: Password to access DRACs
+      when: drac_password is not defined
+  pre_tasks:
+    - name: Fail if the BIOS NumLock value has not been provided
+      fail:
+        msg: >
+          Please set the numlock variable with the required value of the
+          NumLock BIOS setting. Possible Values: On, Off
+      when: numlock is undefined or numlock not in ['On', 'Off']
+  roles:
+    - role: stackhpc.drac
+      drac_address: "{{ ironic.driver_info.drac_address|default(ironic.driver_info.ipmi_address) }}"
+      drac_username: "{{ ironic.driver_info.drac_username|default(ironic.driver_info.ipmi_username) }}"
+      drac_reboot: False
+      drac_bios_config:
+        NumLock: "{{ numlock }}"
+  tasks:
+    - name: Display the result of the drac module
+      debug:
+        var: drac_result

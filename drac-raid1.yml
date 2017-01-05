@@ -1,0 +1,36 @@
+---
+# Playbook to configure the a RAID1 virtual disk on Dell nodes with an iDRAC
+# card. If necessary, reboot the system to apply the changes.
+
+- hosts: all
+  gather_facts: no
+  vars_prompt:
+    # Prompt for the DRAC password if not already defined. It may be provided
+    # as a variable override using ansible-playbook -e drac_password=<password>
+    - name: drac_password
+      prompt: Password to access DRACs
+      when: drac_password is not defined
+  pre_tasks:
+    - name: Fail if the physical disk IDs have not been provided
+      fail:
+        msg: >
+          Please set the raid_pdisk1 and raid_pdisk2 variables with
+          the IDs of the physical disks that will form the RAID1 virtual disk.
+      when: raid_pdisk1 is undefined or raid_pdisk2 is undefined
+  roles:
+    - role: stackhpc.drac
+      drac_address: "{{ ironic.driver_info.drac_address|default(ironic.driver_info.ipmi_address) }}"
+      drac_username: "{{ ironic.driver_info.drac_username|default(ironic.driver_info.ipmi_username) }}"
+      drac_raid_config:
+        - name: Virtual disk 1
+          raid_level: 1
+          span_length: 2
+          span_depth: 1
+          pdisks:
+            - "{{ raid_pdisk1 }}"
+            - "{{ raid_pdisk2 }}"
+      drac_reboot: True
+  tasks:
+    - name: Display the result of the drac module
+      debug:
+        var: drac_result

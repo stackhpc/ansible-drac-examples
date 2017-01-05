@@ -1,0 +1,3 @@
+ansible
+python-dracclient
+python-ironicclient
